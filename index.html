@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>現場見積 Pro - 職人版</title>
+<style>
+  body{font-family:"Noto Sans JP","Yu Gothic","游ゴシック","Hiragino Kaku Gothic ProN","Hiragino Sans","Meiryo",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  button{min-height:44px}
+  input[type=number]{font-variant-numeric:tabular-nums}
+  select{text-align:left}
+  .scrollbar-thin::-webkit-scrollbar{height:8px;width:8px}
+  .scrollbar-thin::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:8px}
+  .glass{backdrop-filter:saturate(180%) blur(14px)}
+
+  /* ========== 印刷スタイル ========== */
+  @media print {
+    @page { size: A4 portrait; margin: 12mm 10mm; }
+
+    /* 非表示にするUI要素 */
+    .no-print { display: none !important; }
+    header.no-print { display: none !important; }
+
+    /* 背景エフェクト非表示 */
+    body > div.pointer-events-none { display: none !important; }
+    body {
+      background: #fff !important;
+      color: #000 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* mainレイアウトリセット */
+    main {
+      max-width: 100% !important;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+    main > section {
+      margin-bottom: 8px !important;
+    }
+    .print-card {
+      box-shadow: none !important;
+      border: 1px solid #ddd !important;
+      background: #fff !important;
+      backdrop-filter: none !important;
+      border-radius: 6px !important;
+    }
+
+    /* section1: ヘッダー情報 */
+    #sec-header {
+      padding: 8px 10px !important;
+    }
+    #sec-header .grid {
+      display: flex !important;
+      gap: 12px !important;
+    }
+    #sec-header .grid > div {
+      flex: 1;
+      border-bottom: 1px solid #000;
+      padding-bottom: 2px;
+    }
+    #sec-header label {
+      display: block;
+      font-size: 9px !important;
+      color: #666 !important;
+      margin-bottom: 2px;
+    }
+    #sec-header input {
+      font-size: 13px !important;
+      font-weight: bold;
+    }
+
+    /* section2: タブ入力エリア → 完全非表示 */
+    #sec-input { display: none !important; }
+
+    /* section3: テーブル */
+    #sec-table {
+      padding: 0 !important;
+      overflow: visible !important;
+    }
+    #sec-table .overflow-x-auto {
+      overflow: visible !important;
+    }
+    table {
+      width: 100% !important;
+      min-width: 0 !important;
+      border-collapse: collapse !important;
+      font-size: 10.5px !important;
+      color: #000 !important;
+    }
+    thead { display: table-header-group !important; }
+    tr { page-break-inside: avoid !important; }
+    th {
+      border-top: 2px solid #000 !important;
+      border-bottom: 1.5px solid #000 !important;
+      padding: 5px 4px !important;
+      font-weight: bold !important;
+      color: #000 !important;
+      background: #f5f5f5 !important;
+      font-size: 10px !important;
+    }
+    td {
+      border-bottom: 1px dashed #bbb !important;
+      padding: 4px 4px !important;
+      color: #000 !important;
+    }
+    td input {
+      font-size: 10.5px !important;
+      font-weight: normal !important;
+      width: 100% !important;
+      border: none !important;
+      background: transparent !important;
+      padding: 0 !important;
+      outline: none !important;
+      color: #000 !important;
+    }
+    /* 印刷時 各列幅 */
+    table th:nth-child(1),table td:nth-child(1) { width: 24px !important; }
+    table th:nth-child(2),table td:nth-child(2) { width: auto !important; }
+    table th:nth-child(3),table td:nth-child(3) { width: 64px !important; font-size:9px; }
+    table th:nth-child(4),table td:nth-child(4) { width: 36px !important; }
+    table th:nth-child(5),table td:nth-child(5) { width: 24px !important; }
+    table th:nth-child(6),table td:nth-child(6) { width: 56px !important; }
+    table th:nth-child(7),table td:nth-child(7) { width: 56px !important; }
+    table th:nth-child(8),table td:nth-child(8) { width: 62px !important; font-weight: bold; }
+    table th:nth-child(9),table td:nth-child(9) { width: 60px !important; }
+    table th:nth-child(10),table td:nth-child(10){ width: 80px !important; font-size:9px; }
+
+    /* section4: 合計 */
+    #sec-totals { padding: 8px 10px !important; }
+    #sec-totals .grid {
+      display: flex !important;
+      gap: 6px !important;
+      flex-wrap: nowrap !important;
+    }
+    #sec-totals .grid > div {
+      flex: 1;
+      border: 1px solid #999 !important;
+      border-radius: 4px !important;
+      padding: 6px 6px !important;
+      background: #fff !important;
+      text-align: center;
+    }
+    #sec-totals .grid > div:last-child {
+      border: 2px solid #000 !important;
+      background: #f0f0f0 !important;
+    }
+    #sec-totals .grid > div > div:first-child {
+      font-size: 9px !important;
+      color: #555 !important;
+      font-weight: normal !important;
+    }
+    #sec-totals .grid > div > div:last-child {
+      font-size: 13px !important;
+      font-weight: bold !important;
+      color: #000 !important;
+      margin-top: 3px !important;
+    }
+    #sumTotal { font-size: 16px !important; }
+
+    /* 値引行は赤字維持 */
+    tr.is-discount td { color: #c00 !important; }
+  }
+  /* ========== 印刷スタイル ここまで ========== */
+</style>
+<style id="tw-inline">
+/*! tailwindcss v4.2.4 | MIT License | https://tailwindcss.com */
+@layer properties{@supports (((-webkit-hyphens:none)) and (not (margin-trim:inline))) or ((-moz-orient:inline) and (not (color:rgb(from red r g b)))){*,:before,:after,::backdrop{--tw-space-y-reverse:0;--tw-divide-y-reverse:0;--tw-border-style:solid;--tw-gradient-position:initial;--tw-gradient-from:#0000;--tw-gradient-via:#0000;--tw-gradient-to:#0000;--tw-gradient-stops:initial;--tw-gradient-via-stops:initial;--tw-gradient-from-position:0%;--tw-gradient-via-position:50%;--tw-gradient-to-position:100%;--tw-leading:initial;--tw-font-weight:initial;--tw-tracking:initial;--tw-ordinal:initial;--tw-slashed-zero:initial;--tw-numeric-figure:initial;--tw-numeric-spacing:initial;--tw-numeric-fraction:initial;--tw-shadow:0 0 #0000;--tw-shadow-color:initial;--tw-shadow-alpha:100%;--tw-inset-shadow:0 0 #0000;--tw-inset-shadow-color:initial;--tw-inset-shadow-alpha:100%;--tw-ring-color:initial;--tw-ring-shadow:0 0 #0000;--tw-inset-ring-color:initial;--tw-inset-ring-shadow:0 0 #0000;--tw-ring-inset:initial;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-offset-shadow:0 0 #0000;--tw-outline-style:solid;--tw-blur:initial;--tw-brightness:initial;--tw-contrast:initial;--tw-grayscale:initial;--tw-hue-rotate:initial;--tw-invert:initial;--tw-opacity:initial;--tw-saturate:initial;--tw-sepia:initial;--tw-drop-shadow:initial;--tw-drop-shadow-color:initial;--tw-drop-shadow-alpha:100%;--tw-drop-shadow-size:initial;--tw-backdrop-blur:initial;--tw-backdrop-brightness:initial;--tw-backdrop-contrast:initial;--tw-backdrop-grayscale:initial;--tw-backdrop-hue-rotate:initial;--tw-backdrop-invert:initial;--tw-backdrop-opacity:initial;--tw-backdrop-saturate:initial;--tw-backdrop-sepia:initial}}}@layer theme{:root,:host{--font-sans:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";--font-mono:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;--color-red-100:oklch(93.6% .032 17.717);--color-red-500:oklch(63.7% .237 25.331);--color-red-600:oklch(57.7% .245 27.325);--color-amber-100:oklch(96.2% .059 95.617);--color-amber-200:oklch(92.4% .12 95.746);--color-amber-300:oklch(87.9% .169 91.605);--color-amber-700:oklch(55.5% .163 48.998);--color-emerald-50:oklch(97.9% .021 166.113);--color-emerald-200:oklch(90.5% .093 164.15);--color-emerald-400:oklch(76.5% .177 163.223);--color-emerald-500:oklch(69.6% .17 162.48);--color-emerald-600:oklch(59.6% .145 163.225);--color-emerald-700:oklch(50.8% .118 165.612);--color-sky-50:oklch(97.7% .013 236.62);--color-sky-100:oklch(95.1% .026 236.824);--color-sky-200:oklch(90.1% .058 230.902);--color-sky-400:oklch(74.6% .16 232.661);--color-sky-500:oklch(68.5% .169 237.323);--color-sky-600:oklch(58.8% .158 241.966);--color-sky-700:oklch(50% .134 242.749);--color-sky-900:oklch(39.1% .09 240.876);--color-violet-100:oklch(94.3% .029 294.588);--color-violet-700:oklch(49.1% .27 292.581);--color-rose-50:oklch(96.9% .015 12.422);--color-rose-100:oklch(94.1% .03 12.58);--color-rose-200:oklch(89.2% .058 10.001);--color-rose-500:oklch(64.5% .246 16.439);--color-rose-600:oklch(58.6% .253 17.585);--color-rose-700:oklch(51.4% .222 16.935);--color-slate-50:oklch(98.4% .003 247.858);--color-slate-100:oklch(96.8% .007 247.896);--color-slate-200:oklch(92.9% .013 255.508);--color-slate-300:oklch(86.9% .022 252.894);--color-slate-400:oklch(70.4% .04 256.788);--color-slate-500:oklch(55.4% .046 257.417);--color-slate-600:oklch(44.6% .043 257.281);--color-slate-800:oklch(27.9% .041 260.031);--color-slate-900:oklch(20.8% .042 265.755);--color-black:#000;--color-white:#fff;--spacing:.25rem;--container-7xl:80rem;--text-xs:.75rem;--text-xs--line-height:calc(1 / .75);--text-sm:.875rem;--text-sm--line-height:calc(1.25 / .875);--text-xl:1.25rem;--text-xl--line-height:calc(1.75 / 1.25);--text-2xl:1.5rem;--text-2xl--line-height:calc(2 / 1.5);--font-weight-medium:500;--font-weight-semibold:600;--font-weight-bold:700;--font-weight-black:900;--tracking-tight:-.025em;--radius-lg:.5rem;--radius-xl:.75rem;--radius-2xl:1rem;--blur-xl:24px;--blur-3xl:64px;--default-transition-duration:.15s;--default-transition-timing-function:cubic-bezier(.4, 0, .2, 1);--default-font-family:var(--font-sans);--default-mono-font-family:var(--font-mono)}}@layer base{*,:after,:before,::backdrop{box-sizing:border-box;border:0 solid;margin:0;padding:0}::file-selector-button{box-sizing:border-box;border:0 solid;margin:0;padding:0}html,:host{-webkit-text-size-adjust:100%;tab-size:4;line-height:1.5;font-family:var(--default-font-family,ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji");font-feature-settings:var(--default-font-feature-settings,normal);font-variation-settings:var(--default-font-variation-settings,normal);-webkit-tap-highlight-color:transparent}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,samp,pre{font-family:var(--default-mono-font-family,ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);font-feature-settings:var(--default-mono-font-feature-settings,normal);font-variation-settings:var(--default-mono-font-variation-settings,normal);font-size:1em}small{font-size:80%}sub,sup{vertical-align:baseline;font-size:75%;line-height:0;position:relative}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}:-moz-focusring{outline:auto}progress{vertical-align:baseline}summary{display:list-item}ol,ul,menu{list-style:none}img,svg,video,canvas,audio,iframe,embed,object{vertical-align:middle;display:block}img,video{max-width:100%;height:auto}button,input,select,optgroup,textarea{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}::file-selector-button{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}:where(select:is([multiple],[size])) optgroup{font-weight:bolder}:where(select:is([multiple],[size])) optgroup option{padding-inline-start:20px}::file-selector-button{margin-inline-end:4px}::placeholder{opacity:1}@supports (not ((-webkit-appearance:-apple-pay-button))) or (contain-intrinsic-size:1px){::placeholder{color:currentColor}@supports (color:color-mix(in lab, red, red)){::placeholder{color:color-mix(in oklab, currentcolor 50%, transparent)}}}textarea{resize:vertical}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-date-and-time-value{min-height:1lh;text-align:inherit}::-webkit-datetime-edit{display:inline-flex}::-webkit-datetime-edit-fields-wrapper{padding:0}::-webkit-datetime-edit{padding-block:0}::-webkit-datetime-edit-year-field{padding-block:0}::-webkit-datetime-edit-month-field{padding-block:0}::-webkit-datetime-edit-day-field{padding-block:0}::-webkit-datetime-edit-hour-field{padding-block:0}::-webkit-datetime-edit-minute-field{padding-block:0}::-webkit-datetime-edit-second-field{padding-block:0}::-webkit-datetime-edit-millisecond-field{padding-block:0}::-webkit-datetime-edit-meridiem-field{padding-block:0}::-webkit-calendar-picker-indicator{line-height:1}:-moz-ui-invalid{box-shadow:none}button,input:where([type=button],[type=reset],[type=submit]){appearance:button}::file-selector-button{appearance:button}::-webkit-inner-spin-button{height:auto}::-webkit-outer-spin-button{height:auto}[hidden]:where(:not([hidden=until-found])){display:none!important}}@layer components;@layer utilities{.pointer-events-none{pointer-events:none}.collapse{visibility:collapse}.visible{visibility:visible}.absolute{position:absolute}.fixed{position:fixed}.sticky{position:sticky}.inset-0{inset:calc(var(--spacing) * 0)}.-top-40{top:calc(var(--spacing) * -40)}.top-0{top:calc(var(--spacing) * 0)}.top-1\/3{top:33.3333%}.-right-40{right:calc(var(--spacing) * -40)}.-left-40{left:calc(var(--spacing) * -40)}.-z-10{z-index:calc(10 * -1)}.z-10{z-index:10}.z-40{z-index:40}.mx-auto{margin-inline:auto}.-mt-0\.5{margin-top:calc(var(--spacing) * -.5)}.mt-1{margin-top:calc(var(--spacing) * 1)}.mt-3{margin-top:calc(var(--spacing) * 3)}.mt-4{margin-top:calc(var(--spacing) * 4)}.mb-3{margin-bottom:calc(var(--spacing) * 3)}.ml-1{margin-left:calc(var(--spacing) * 1)}.ml-auto{margin-left:auto}.flex{display:flex}.grid{display:grid}.hidden{display:none}.table{display:table}.table-header-group{display:table-header-group}.h-4{height:calc(var(--spacing) * 4)}.h-6{height:calc(var(--spacing) * 6)}.h-7{height:calc(var(--spacing) * 7)}.h-8{height:calc(var(--spacing) * 8)}.h-10{height:calc(var(--spacing) * 10)}.h-16{height:calc(var(--spacing) * 16)}.h-\[480px\]{height:480px}.h-\[520px\]{height:520px}.min-h-screen{min-height:100vh}.w-4{width:calc(var(--spacing) * 4)}.w-6{width:calc(var(--spacing) * 6)}.w-7{width:calc(var(--spacing) * 7)}.w-8{width:calc(var(--spacing) * 8)}.w-10{width:calc(var(--spacing) * 10)}.w-14{width:calc(var(--spacing) * 14)}.w-16{width:calc(var(--spacing) * 16)}.w-20{width:calc(var(--spacing) * 20)}.w-24{width:calc(var(--spacing) * 24)}.w-28{width:calc(var(--spacing) * 28)}.w-36{width:calc(var(--spacing) * 36)}.w-\[480px\]{width:480px}.w-\[520px\]{width:520px}.w-full{width:100%}.max-w-7xl{max-width:var(--container-7xl)}.max-w-\[160px\]{max-width:160px}.min-w-\[980px\]{min-width:980px}.flex-1{flex:1}.border-collapse{border-collapse:collapse}.cursor-pointer{cursor:pointer}.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.place-items-center{place-items:center}.items-center{align-items:center}.items-end{align-items:flex-end}.justify-center{justify-content:center}.gap-1{gap:calc(var(--spacing) * 1)}.gap-1\.5{gap:calc(var(--spacing) * 1.5)}.gap-2{gap:calc(var(--spacing) * 2)}.gap-3{gap:calc(var(--spacing) * 3)}.gap-4{gap:calc(var(--spacing) * 4)}:where(.space-y-5>:not(:last-child)){--tw-space-y-reverse:0;margin-block-start:calc(calc(var(--spacing) * 5) * var(--tw-space-y-reverse));margin-block-end:calc(calc(var(--spacing) * 5) * calc(1 - var(--tw-space-y-reverse)))}:where(.divide-y>:not(:last-child)){--tw-divide-y-reverse:0;border-bottom-style:var(--tw-border-style);border-top-style:var(--tw-border-style);border-top-width:calc(1px * var(--tw-divide-y-reverse));border-bottom-width:calc(1px * calc(1 - var(--tw-divide-y-reverse)))}:where(.divide-slate-100>:not(:last-child)){border-color:var(--color-slate-100)}.truncate{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.overflow-hidden{overflow:hidden}.overflow-x-auto{overflow-x:auto}.rounded{border-radius:.25rem}.rounded-2xl{border-radius:var(--radius-2xl)}.rounded-\[28px\]{border-radius:28px}.rounded-full{border-radius:3.40282e38px}.rounded-lg{border-radius:var(--radius-lg)}.rounded-xl{border-radius:var(--radius-xl)}.border{border-style:var(--tw-border-style);border-width:1px}.border-t-2{border-top-style:var(--tw-border-style);border-top-width:2px}.border-b{border-bottom-style:var(--tw-border-style);border-bottom-width:1px}.border-b-2{border-bottom-style:var(--tw-border-style);border-bottom-width:2px}.border-dashed{--tw-border-style:dashed;border-style:dashed}.border-emerald-200{border-color:var(--color-emerald-200)}.border-rose-200{border-color:var(--color-rose-200)}.border-sky-200{border-color:var(--color-sky-200)}.border-slate-200{border-color:var(--color-slate-200)}.border-slate-200\/80{border-color:#e2e8f0cc}@supports (color:color-mix(in lab, red, red)){.border-slate-200\/80{border-color:color-mix(in oklab, var(--color-slate-200) 80%, transparent)}}.border-slate-300{border-color:var(--color-slate-300)}.border-slate-900{border-color:var(--color-slate-900)}.border-white\/10{border-color:#ffffff1a}@supports (color:color-mix(in lab, red, red)){.border-white\/10{border-color:color-mix(in oklab, var(--color-white) 10%, transparent)}}.border-white\/60{border-color:#fff9}@supports (color:color-mix(in lab, red, red)){.border-white\/60{border-color:color-mix(in oklab, var(--color-white) 60%, transparent)}}.bg-amber-100{background-color:var(--color-amber-100)}.bg-amber-200{background-color:var(--color-amber-200)}.bg-emerald-50{background-color:var(--color-emerald-50)}.bg-emerald-400\/20{background-color:#00d29433}@supports (color:color-mix(in lab, red, red)){.bg-emerald-400\/20{background-color:color-mix(in oklab, var(--color-emerald-400) 20%, transparent)}}.bg-emerald-600{background-color:var(--color-emerald-600)}.bg-red-500\/90{background-color:#fb2c36e6}@supports (color:color-mix(in lab, red, red)){.bg-red-500\/90{background-color:color-mix(in oklab, var(--color-red-500) 90%, transparent)}}.bg-rose-50{background-color:var(--color-rose-50)}.bg-rose-100{background-color:var(--color-rose-100)}.bg-rose-600{background-color:var(--color-rose-600)}.bg-sky-100{background-color:var(--color-sky-100)}.bg-sky-400\/20{background-color:#00bcfe33}@supports (color:color-mix(in lab, red, red)){.bg-sky-400\/20{background-color:color-mix(in oklab, var(--color-sky-400) 20%, transparent)}}.bg-sky-600{background-color:var(--color-sky-600)}.bg-sky-700{background-color:var(--color-sky-700)}.bg-slate-50\/80{background-color:#f8fafccc}@supports (color:color-mix(in lab, red, red)){.bg-slate-50\/80{background-color:color-mix(in oklab, var(--color-slate-50) 80%, transparent)}}.bg-slate-100{background-color:var(--color-slate-100)}.bg-slate-800{background-color:var(--color-slate-800)}.bg-slate-900{background-color:var(--color-slate-900)}.bg-slate-900\/90{background-color:#0f172be6}@supports (color:color-mix(in lab, red, red)){.bg-slate-900\/90{background-color:color-mix(in oklab, var(--color-slate-900) 90%, transparent)}}.bg-transparent{background-color:#0000}.bg-violet-100{background-color:var(--color-violet-100)}.bg-white{background-color:var(--color-white)}.bg-white\/10{background-color:#ffffff1a}@supports (color:color-mix(in lab, red, red)){.bg-white\/10{background-color:color-mix(in oklab, var(--color-white) 10%, transparent)}}.bg-white\/70{background-color:#ffffffb3}@supports (color:color-mix(in lab, red, red)){.bg-white\/70{background-color:color-mix(in oklab, var(--color-white) 70%, transparent)}}.bg-white\/80{background-color:#fffc}@supports (color:color-mix(in lab, red, red)){.bg-white\/80{background-color:color-mix(in oklab, var(--color-white) 80%, transparent)}}.bg-gradient-to-b{--tw-gradient-position:to bottom in oklab;background-image:linear-gradient(var(--tw-gradient-stops))}.bg-gradient-to-br{--tw-gradient-position:to bottom right in oklab;background-image:linear-gradient(var(--tw-gradient-stops))}.bg-gradient-to-r{--tw-gradient-position:to right in oklab;background-image:linear-gradient(var(--tw-gradient-stops))}.bg-\[radial-gradient\(ellipse_at_top\,_var\(--tw-gradient-stops\)\)\]{background-image:radial-gradient(ellipse at top, var(--tw-gradient-stops))}.from-emerald-600{--tw-gradient-from:var(--color-emerald-600);--tw-gradient-stops:var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))}.from-rose-50{--tw-gradient-from:var(--color-rose-50);--tw-gradient-stops:var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))}.from-sky-50{--tw-gradient-from:var(--color-sky-50);--tw-gradient-stops:var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))}.from-sky-400{--tw-gradient-from:var(--color-sky-400);--tw-gradient-stops:var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))}.from-slate-50{--tw-gradient-from:var(--color-slate-50);--tw-gradient-stops:var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))}.from-slate-50\/80{--tw-gradient-from:#f8fafccc}@supports (color:color-mix(in lab, red, red)){.from-slate-50\/80{--tw-gradient-from:color-mix(in oklab, var(--color-slate-50) 80%, transparent)}}.from-slate-50\/80{--tw-gradient-stops:var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))}.via-slate-100{--tw-gradient-via:var(--color-slate-100);--tw-gradient-via-stops:var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-via) var(--tw-gradient-via-position), var(--tw-gradient-to) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-via-stops)}.to-emerald-500{--tw-gradient-to:var(--color-emerald-500);--tw-gradient-stops:var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))}.to-slate-200{--tw-gradient-to:var(--color-slate-200);--tw-gradient-stops:var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))}.to-white{--tw-gradient-to:var(--color-white);--tw-gradient-stops:var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))}.to-white\/80{--tw-gradient-to:#fffc}@supports (color:color-mix(in lab, red, red)){.to-white\/80{--tw-gradient-to:color-mix(in oklab, var(--color-white) 80%, transparent)}}.to-white\/80{--tw-gradient-stops:var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position))}.p-3{padding:calc(var(--spacing) * 3)}.p-4{padding:calc(var(--spacing) * 4)}.p-5{padding:calc(var(--spacing) * 5)}.px-1{padding-inline:calc(var(--spacing) * 1)}.px-1\.5{padding-inline:calc(var(--spacing) * 1.5)}.px-2{padding-inline:calc(var(--spacing) * 2)}.px-3{padding-inline:calc(var(--spacing) * 3)}.px-4{padding-inline:calc(var(--spacing) * 4)}.px-5{padding-inline:calc(var(--spacing) * 5)}.px-6{padding-inline:calc(var(--spacing) * 6)}.py-0\.5{padding-block:calc(var(--spacing) * .5)}.py-1\.5{padding-block:calc(var(--spacing) * 1.5)}.py-2{padding-block:calc(var(--spacing) * 2)}.py-2\.5{padding-block:calc(var(--spacing) * 2.5)}.py-3{padding-block:calc(var(--spacing) * 3)}.py-3\.5{padding-block:calc(var(--spacing) * 3.5)}.py-20{padding-block:calc(var(--spacing) * 20)}.pr-2{padding-right:calc(var(--spacing) * 2)}.pr-3{padding-right:calc(var(--spacing) * 3)}.pl-3{padding-left:calc(var(--spacing) * 3)}.text-left{text-align:left}.text-right{text-align:right}.text-2xl{font-size:var(--text-2xl);line-height:var(--tw-leading,var(--text-2xl--line-height))}.text-sm{font-size:var(--text-sm);line-height:var(--tw-leading,var(--text-sm--line-height))}.text-xl{font-size:var(--text-xl);line-height:var(--tw-leading,var(--text-xl--line-height))}.text-xs{font-size:var(--text-xs);line-height:var(--tw-leading,var(--text-xs--line-height))}.text-\[10px\]{font-size:10px}.text-\[11px\]{font-size:11px}.text-\[13px\]{font-size:13px}.leading-none{--tw-leading:1;line-height:1}.font-black{--tw-font-weight:var(--font-weight-black);font-weight:var(--font-weight-black)}.font-bold{--tw-font-weight:var(--font-weight-bold);font-weight:var(--font-weight-bold)}.font-medium{--tw-font-weight:var(--font-weight-medium);font-weight:var(--font-weight-medium)}.font-semibold{--tw-font-weight:var(--font-weight-semibold);font-weight:var(--font-weight-semibold)}.tracking-tight{--tw-tracking:var(--tracking-tight);letter-spacing:var(--tracking-tight)}.text-amber-700{color:var(--color-amber-700)}.text-emerald-700{color:var(--color-emerald-700)}.text-red-600{color:var(--color-red-600)}.text-rose-600{color:var(--color-rose-600)}.text-rose-700{color:var(--color-rose-700)}.text-sky-200\/70{color:#b8e6feb3}@supports (color:color-mix(in lab, red, red)){.text-sky-200\/70{color:color-mix(in oklab, var(--color-sky-200) 70%, transparent)}}.text-sky-700{color:var(--color-sky-700)}.text-slate-400{color:var(--color-slate-400)}.text-slate-500{color:var(--color-slate-500)}.text-slate-600{color:var(--color-slate-600)}.text-slate-800{color:var(--color-slate-800)}.text-slate-900{color:var(--color-slate-900)}.text-violet-700{color:var(--color-violet-700)}.text-white{color:var(--color-white)}.tabular-nums{--tw-numeric-spacing:tabular-nums;font-variant-numeric:var(--tw-ordinal,) var(--tw-slashed-zero,) var(--tw-numeric-figure,) var(--tw-numeric-spacing,) var(--tw-numeric-fraction,)}.opacity-0{opacity:0}.opacity-90{opacity:.9}.shadow{--tw-shadow:0 1px 3px 0 var(--tw-shadow-color,#0000001a), 0 1px 2px -1px var(--tw-shadow-color,#0000001a);box-shadow:var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)}.shadow-lg{--tw-shadow:0 10px 15px -3px var(--tw-shadow-color,#0000001a), 0 4px 6px -4px var(--tw-shadow-color,#0000001a);box-shadow:var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)}.shadow-xl{--tw-shadow:0 20px 25px -5px var(--tw-shadow-color,#0000001a), 0 8px 10px -6px var(--tw-shadow-color,#0000001a);box-shadow:var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)}.shadow-emerald-600\/20{--tw-shadow-color:#00976733}@supports (color:color-mix(in lab, red, red)){.shadow-emerald-600\/20{--tw-shadow-color:color-mix(in oklab, color-mix(in oklab, var(--color-emerald-600) 20%, transparent) var(--tw-shadow-alpha), transparent)}}.shadow-sky-900\/30{--tw-shadow-color:#024a704d}@supports (color:color-mix(in lab, red, red)){.shadow-sky-900\/30{--tw-shadow-color:color-mix(in oklab, color-mix(in oklab, var(--color-sky-900) 30%, transparent) var(--tw-shadow-alpha), transparent)}}.shadow-slate-200\/70{--tw-shadow-color:#e2e8f0b3}@supports (color:color-mix(in lab, red, red)){.shadow-slate-200\/70{--tw-shadow-color:color-mix(in oklab, color-mix(in oklab, var(--color-slate-200) 70%, transparent) var(--tw-shadow-alpha), transparent)}}.shadow-slate-900\/20{--tw-shadow-color:#0f172b33}@supports (color:color-mix(in lab, red, red)){.shadow-slate-900\/20{--tw-shadow-color:color-mix(in oklab, color-mix(in oklab, var(--color-slate-900) 20%, transparent) var(--tw-shadow-alpha), transparent)}}.outline{outline-style:var(--tw-outline-style);outline-width:1px}.blur-3xl{--tw-blur:blur(var(--blur-3xl));filter:var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,)}.backdrop-blur{--tw-backdrop-blur:blur(8px);-webkit-backdrop-filter:var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,);backdrop-filter:var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,)}.backdrop-blur-xl{--tw-backdrop-blur:blur(var(--blur-xl));-webkit-backdrop-filter:var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,);backdrop-filter:var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,)}.backdrop-filter{-webkit-backdrop-filter:var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,);backdrop-filter:var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,)}.transition{transition-property:color,background-color,border-color,outline-color,text-decoration-color,fill,stroke,--tw-gradient-from,--tw-gradient-via,--tw-gradient-to,opacity,box-shadow,transform,translate,scale,rotate,filter,-webkit-backdrop-filter,backdrop-filter,display,content-visibility,overlay,pointer-events;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}.outline-none{--tw-outline-style:none;outline-style:none}@media (hover:hover){.group-hover\:opacity-100:is(:where(.group):hover *){opacity:1}.hover\:bg-amber-200:hover{background-color:var(--color-amber-200)}.hover\:bg-amber-300:hover{background-color:var(--color-amber-300)}.hover\:bg-black:hover{background-color:var(--color-black)}.hover\:bg-emerald-500:hover{background-color:var(--color-emerald-500)}.hover\:bg-red-100:hover{background-color:var(--color-red-100)}.hover\:bg-red-500:hover{background-color:var(--color-red-500)}.hover\:bg-rose-500:hover{background-color:var(--color-rose-500)}.hover\:bg-sky-50\/50:hover{background-color:#f0f9ff80}@supports (color:color-mix(in lab, red, red)){.hover\:bg-sky-50\/50:hover{background-color:color-mix(in oklab, var(--color-sky-50) 50%, transparent)}}.hover\:bg-sky-500:hover{background-color:var(--color-sky-500)}.hover\:bg-sky-600:hover{background-color:var(--color-sky-600)}.hover\:bg-slate-200:hover{background-color:var(--color-slate-200)}.hover\:bg-white:hover{background-color:var(--color-white)}.hover\:bg-white\/20:hover{background-color:#fff3}@supports (color:color-mix(in lab, red, red)){.hover\:bg-white\/20:hover{background-color:color-mix(in oklab, var(--color-white) 20%, transparent)}}.hover\:text-red-600:hover{color:var(--color-red-600)}.hover\:text-slate-800:hover{color:var(--color-slate-800)}.hover\:shadow-md:hover{--tw-shadow:0 4px 6px -1px var(--tw-shadow-color,#0000001a), 0 2px 4px -2px var(--tw-shadow-color,#0000001a);box-shadow:var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)}}.focus\:border-emerald-500:focus{border-color:var(--color-emerald-500)}.focus\:border-rose-500:focus{border-color:var(--color-rose-500)}.focus\:border-sky-500:focus{border-color:var(--color-sky-500)}.focus\:bg-white:focus{background-color:var(--color-white)}.focus\:ring-1:focus{--tw-ring-shadow:var(--tw-ring-inset,) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color,currentcolor);box-shadow:var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)}.focus\:ring-2:focus{--tw-ring-shadow:var(--tw-ring-inset,) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color,currentcolor);box-shadow:var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)}.focus\:ring-emerald-500\/30:focus{--tw-ring-color:#00bb7f4d}@supports (color:color-mix(in lab, red, red)){.focus\:ring-emerald-500\/30:focus{--tw-ring-color:color-mix(in oklab, var(--color-emerald-500) 30%, transparent)}}.focus\:ring-rose-500\/30:focus{--tw-ring-color:#ff23574d}@supports (color:color-mix(in lab, red, red)){.focus\:ring-rose-500\/30:focus{--tw-ring-color:color-mix(in oklab, var(--color-rose-500) 30%, transparent)}}.focus\:ring-sky-500:focus{--tw-ring-color:var(--color-sky-500)}.focus\:ring-sky-500\/30:focus{--tw-ring-color:#00a5ef4d}@supports (color:color-mix(in lab, red, red)){.focus\:ring-sky-500\/30:focus{--tw-ring-color:color-mix(in oklab, var(--color-sky-500) 30%, transparent)}}.focus\:outline-none:focus{--tw-outline-style:none;outline-style:none}.active\:scale-\[0\.98\]:active{scale:.98}@media (min-width:40rem){.sm\:flex{display:flex}.sm\:inline{display:inline}.sm\:p-6{padding:calc(var(--spacing) * 6)}.sm\:px-6{padding-inline:calc(var(--spacing) * 6)}}@media (min-width:48rem){.md\:col-span-2{grid-column:span 2/span 2}.md\:col-span-3{grid-column:span 3/span 3}.md\:col-span-4{grid-column:span 4/span 4}.md\:flex{display:flex}.md\:w-auto{width:auto}.md\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.md\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}.md\:grid-cols-6{grid-template-columns:repeat(6,minmax(0,1fr))}.md\:grid-cols-12{grid-template-columns:repeat(12,minmax(0,1fr))}}@media (min-width:64rem){.lg\:grid-cols-6{grid-template-columns:repeat(6,minmax(0,1fr))}}}@property --tw-space-y-reverse{syntax:"*";inherits:false;initial-value:0}@property --tw-divide-y-reverse{syntax:"*";inherits:false;initial-value:0}@property --tw-border-style{syntax:"*";inherits:false;initial-value:solid}@property --tw-gradient-position{syntax:"*";inherits:false}@property --tw-gradient-from{syntax:"<color>";inherits:false;initial-value:#0000}@property --tw-gradient-via{syntax:"<color>";inherits:false;initial-value:#0000}@property --tw-gradient-to{syntax:"<color>";inherits:false;initial-value:#0000}@property --tw-gradient-stops{syntax:"*";inherits:false}@property --tw-gradient-via-stops{syntax:"*";inherits:false}@property --tw-gradient-from-position{syntax:"<length-percentage>";inherits:false;initial-value:0%}@property --tw-gradient-via-position{syntax:"<length-percentage>";inherits:false;initial-value:50%}@property --tw-gradient-to-position{syntax:"<length-percentage>";inherits:false;initial-value:100%}@property --tw-leading{syntax:"*";inherits:false}@property --tw-font-weight{syntax:"*";inherits:false}@property --tw-tracking{syntax:"*";inherits:false}@property --tw-ordinal{syntax:"*";inherits:false}@property --tw-slashed-zero{syntax:"*";inherits:false}@property --tw-numeric-figure{syntax:"*";inherits:false}@property --tw-numeric-spacing{syntax:"*";inherits:false}@property --tw-numeric-fraction{syntax:"*";inherits:false}@property --tw-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}@property --tw-shadow-color{syntax:"*";inherits:false}@property --tw-shadow-alpha{syntax:"<percentage>";inherits:false;initial-value:100%}@property --tw-inset-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}@property --tw-inset-shadow-color{syntax:"*";inherits:false}@property --tw-inset-shadow-alpha{syntax:"<percentage>";inherits:false;initial-value:100%}@property --tw-ring-color{syntax:"*";inherits:false}@property --tw-ring-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}@property --tw-inset-ring-color{syntax:"*";inherits:false}@property --tw-inset-ring-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}@property --tw-ring-inset{syntax:"*";inherits:false}@property --tw-ring-offset-width{syntax:"<length>";inherits:false;initial-value:0}@property --tw-ring-offset-color{syntax:"*";inherits:false;initial-value:#fff}@property --tw-ring-offset-shadow{syntax:"*";inherits:false;initial-value:0 0 #0000}@property --tw-outline-style{syntax:"*";inherits:false;initial-value:solid}@property --tw-blur{syntax:"*";inherits:false}@property --tw-brightness{syntax:"*";inherits:false}@property --tw-contrast{syntax:"*";inherits:false}@property --tw-grayscale{syntax:"*";inherits:false}@property --tw-hue-rotate{syntax:"*";inherits:false}@property --tw-invert{syntax:"*";inherits:false}@property --tw-opacity{syntax:"*";inherits:false}@property --tw-saturate{syntax:"*";inherits:false}@property --tw-sepia{syntax:"*";inherits:false}@property --tw-drop-shadow{syntax:"*";inherits:false}@property --tw-drop-shadow-color{syntax:"*";inherits:false}@property --tw-drop-shadow-alpha{syntax:"<percentage>";inherits:false;initial-value:100%}@property --tw-drop-shadow-size{syntax:"*";inherits:false}@property --tw-backdrop-blur{syntax:"*";inherits:false}@property --tw-backdrop-brightness{syntax:"*";inherits:false}@property --tw-backdrop-contrast{syntax:"*";inherits:false}@property --tw-backdrop-grayscale{syntax:"*";inherits:false}@property --tw-backdrop-hue-rotate{syntax:"*";inherits:false}@property --tw-backdrop-invert{syntax:"*";inherits:false}@property --tw-backdrop-opacity{syntax:"*";inherits:false}@property --tw-backdrop-saturate{syntax:"*";inherits:false}@property --tw-backdrop-sepia{syntax:"*";inherits:false}
+</style>
+</head>
+<body class="bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-50 via-slate-100 to-slate-200 text-slate-800 min-h-screen">
+
+<!-- 背景エフェクト -->
+<div class="pointer-events-none fixed inset-0 -z-10" aria-hidden="true">
+  <div class="absolute -top-40 -right-40 w-[520px] h-[520px] bg-sky-400/20 rounded-full blur-3xl"></div>
+  <div class="absolute top-1/3 -left-40 w-[480px] h-[480px] bg-emerald-400/20 rounded-full blur-3xl"></div>
+</div>
+
+<!-- ヘッダー -->
+<header class="no-print sticky top-0 z-40 glass bg-slate-900/90 border-b border-white/10">
+  <div class="max-w-7xl mx-auto px-3 sm:px-6 py-3 flex items-center gap-3">
+    <div class="flex items-center gap-3">
+      <!-- SVGアイコン: 正しいpathデータに修正 -->
+      <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-400 to-emerald-500 grid place-items-center shadow-lg shadow-sky-900/30">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" class="w-6 h-6" aria-hidden="true">
+          <path d="M11.25 4.533A9.707 9.707 0 006 3a9.735 9.735 0 00-3.25.555.75.75 0 00-.5.707v14.25a.75.75 0 001 .707 8.237 8.237 0 012.75-.468c1.995 0 3.823.707 5.25 1.886V4.533zM12.75 20.636A8.214 8.214 0 0118 18.75c.966 0 1.89.166 2.75.47a.75.75 0 001-.708V4.262a.75.75 0 00-.5-.707A9.735 9.735 0 0018 3a9.707 9.707 0 00-5.25 1.533v16.103z"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-xl font-black tracking-tight text-white leading-none">現場見積</h1>
+        <p class="text-[11px] text-sky-200/70 -mt-0.5 font-medium">PROFESSIONAL 職人版 v9.1</p>
+      </div>
+    </div>
+    <div class="flex-1"></div>
+    <div class="flex flex-wrap gap-1.5">
+      <button id="btnUndo" class="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm flex items-center gap-1.5 transition" title="元に戻す (Ctrl+Z)">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+        <span class="hidden sm:inline">戻る</span>
+      </button>
+      <button id="btnClear" class="px-3 py-2 bg-red-500/90 hover:bg-red-500 text-white rounded-xl text-sm font-medium transition">全消去</button>
+      <button id="btnSaveJson" class="px-3 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-sm hidden sm:flex items-center gap-1.5 transition">JSON保存</button>
+      <label class="px-3 py-2 bg-sky-700 hover:bg-sky-600 text-white rounded-xl text-sm cursor-pointer transition flex items-center" style="min-height:44px">
+        読込<input id="fileJson" type="file" accept=".json" class="hidden">
+      </label>
+      <button id="btnSaveHtml" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm hidden md:flex transition">HTML保存</button>
+      <button id="btnPrint" class="px-4 py-2 bg-white text-slate-900 rounded-xl text-sm font-bold shadow hover:shadow-md transition">印刷</button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto p-3 sm:p-6 space-y-5">
+
+  <!-- section 1: ヘッダー情報 -->
+  <section id="sec-header" class="print-card bg-white/80 backdrop-blur-xl rounded-[28px] shadow-xl shadow-slate-200/70 border border-white/60 p-5">
+    <div class="grid md:grid-cols-4 gap-4">
+      <div>
+        <label class="text-[11px] text-slate-500 font-medium ml-1" for="h_koji">工事名</label>
+        <input id="h_koji" placeholder="〇〇ビル 改修工事" class="mt-1 w-full border border-slate-200 bg-white/70 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 transition">
+      </div>
+      <div>
+        <label class="text-[11px] text-slate-500 font-medium ml-1" for="h_kaisha">会社</label>
+        <input id="h_kaisha" class="mt-1 w-full border border-slate-200 bg-white/70 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 transition">
+      </div>
+      <div>
+        <label class="text-[11px] text-slate-500 font-medium ml-1" for="h_tanto">担当者</label>
+        <input id="h_tanto" class="mt-1 w-full border border-slate-200 bg-white/70 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 transition">
+      </div>
+      <div>
+        <label class="text-[11px] text-slate-500 font-medium ml-1" for="h_date">制作日</label>
+        <input id="h_date" type="date" class="mt-1 w-full border border-slate-200 bg-white/70 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 transition">
+      </div>
+    </div>
+  </section>
+
+  <!-- section 2: タブ入力（印刷時非表示） -->
+  <section id="sec-input" class="print-card bg-white/80 backdrop-blur-xl rounded-[28px] shadow-xl shadow-slate-200/70 border border-white/60 overflow-hidden no-print">
+    <div class="flex border-b border-slate-200/80 bg-gradient-to-r from-slate-50/80 to-white/80 px-2">
+      <button data-tab="item"   class="tab-btn px-5 py-3.5 font-bold text-slate-900 border-b-2 border-slate-900 transition">名称(材料)</button>
+      <button data-tab="adjust" class="tab-btn px-5 py-3.5 text-slate-500 hover:text-slate-800 transition">諸経費・調整</button>
+      <button data-tab="labor"  class="tab-btn px-5 py-3.5 text-slate-500 hover:text-slate-800 transition">工料</button>
+    </div>
+
+    <!-- 材料タブ -->
+    <div id="tab-item" class="p-5">
+      <div class="grid md:grid-cols-12 gap-3">
+        <div class="md:col-span-3">
+          <label class="text-[11px] text-slate-500 ml-1" for="i_name">品名</label>
+          <input id="i_name" list="dl" placeholder="VVF 2.0-3c" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 bg-white focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 outline-none">
+          <datalist id="dl"></datalist>
+        </div>
+        <div class="md:col-span-2">
+          <label class="text-[11px] text-slate-500 ml-1" for="i_code">品番</label>
+          <input id="i_code" maxlength="20" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 bg-white focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 outline-none">
+        </div>
+        <div>
+          <label class="text-[11px] text-slate-500 ml-1" for="i_qty">数量</label>
+          <input id="i_qty" type="number" value="1" min="0" step="1" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 bg-white text-right focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 outline-none">
+        </div>
+        <div>
+          <label class="text-[11px] text-slate-500 ml-1" for="i_unit">単位</label>
+          <select id="i_unit" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 bg-white focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 outline-none">
+            <option>M</option><option>本</option><option>面</option><option>台</option><option>個</option><option>式</option><option>枚</option>
+          </select>
+        </div>
+        <div class="md:col-span-2">
+          <label class="text-[11px] text-slate-500 ml-1" for="i_price">単価</label>
+          <input id="i_price" type="number" min="0" step="1" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 bg-white text-right focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 outline-none">
+        </div>
+        <div>
+          <label class="text-[11px] text-slate-500 ml-1" for="i_net">NET単価</label>
+          <input id="i_net" type="number" min="0" step="1" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 bg-white text-right focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 outline-none">
+        </div>
+        <div>
+          <label class="text-[11px] text-slate-500 ml-1" for="i_disc">値引%</label>
+          <input id="i_disc" type="number" min="0" max="100" step="0.1" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 bg-white text-right focus:ring-2 focus:ring-rose-500/30 focus:border-rose-500 outline-none">
+        </div>
+      </div>
+      <div class="mt-4 flex flex-wrap items-center gap-3">
+        <div class="flex items-center gap-2 text-sm">
+          <span class="px-3 py-1.5 rounded-full bg-slate-900 text-white font-medium">余力 <span id="i_margin" class="font-black">-</span>%</span>
+          <span class="px-3 py-1.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">値引額 ¥<span id="i_discAmt" class="font-bold">0</span></span>
+          <span class="px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">値引後 ¥<span id="i_after" class="font-bold">0</span></span>
+        </div>
+        <button id="btnAddItem" class="ml-auto px-6 py-2.5 bg-slate-900 hover:bg-black text-white rounded-xl font-bold shadow-lg shadow-slate-900/20 active:scale-[0.98] transition">材料追加</button>
+      </div>
+    </div>
+
+    <!-- 諸経費タブ -->
+    <div id="tab-adjust" class="p-5 hidden">
+      <div class="grid md:grid-cols-6 gap-3">
+        <div>
+          <label class="text-[11px] text-slate-500 ml-1" for="r_support">支持率%</label>
+          <input id="r_support" type="number" value="15" min="0" max="100" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-right">
+        </div>
+        <div>
+          <label class="text-[11px] text-slate-500 ml-1" for="r_misc">雑材率%</label>
+          <input id="r_misc" type="number" value="15" min="0" max="100" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-right">
+        </div>
+        <div>
+          <label class="text-[11px] text-slate-500 ml-1" for="r_over">諸経費率%</label>
+          <input id="r_over" type="number" value="20" min="0" max="100" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-right">
+        </div>
+        <div>
+          <label class="text-[11px] text-slate-500 ml-1" for="r_tax">消費税率%</label>
+          <input id="r_tax" type="number" value="10" min="0" max="100" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-right">
+        </div>
+        <div class="md:col-span-2 flex gap-2 flex-wrap items-end">
+          <button id="btnAddDivider" class="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-sm">仕切り</button>
+          <button id="btnAddSupport" class="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-sm">支持材</button>
+          <button id="btnAddMisc"    class="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-sm">雑材</button>
+          <button id="btnAddOver"    class="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-sm">諸経費</button>
+        </div>
+      </div>
+      <div class="mt-3 flex gap-2 flex-wrap items-center">
+        <button onclick="roundAdj(500)"  class="px-3 py-2.5 bg-amber-100 hover:bg-amber-200 rounded-xl text-sm">500円切捨て</button>
+        <button onclick="roundAdj(1000)" class="px-3 py-2.5 bg-amber-100 hover:bg-amber-200 rounded-xl text-sm">1000円切捨て</button>
+        <input id="manualAdj" type="number" placeholder="手入力調整額" class="w-36 border border-slate-200 rounded-xl px-3 py-2.5">
+        <button id="btnManualAdj" class="px-3 py-2.5 bg-amber-200 hover:bg-amber-300 rounded-xl text-sm font-medium">追加</button>
+        <button id="btnConsolidateDisc" class="ml-auto px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-sm font-bold shadow">値引をまとめて追加</button>
+      </div>
+    </div>
+
+    <!-- 工料タブ -->
+    <div id="tab-labor" class="p-5 hidden">
+      <div class="grid md:grid-cols-12 gap-3">
+        <div class="md:col-span-4">
+          <label class="text-[11px] text-slate-500 ml-1" for="l_name">工料名</label>
+          <select id="l_name" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 bg-white">
+            <option>工料</option><option>漏電調査費</option><option>活線車</option><option>テレビ調整費</option><option>清掃費</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-[11px] text-slate-500 ml-1" for="l_qty">数量</label>
+          <input id="l_qty" type="number" value="1" min="0" step="1" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-right">
+        </div>
+        <div>
+          <label class="text-[11px] text-slate-500 ml-1" for="l_unit">単位</label>
+          <input id="l_unit" value="式" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5">
+        </div>
+        <div class="md:col-span-2">
+          <label class="text-[11px] text-slate-500 ml-1" for="l_price">単価</label>
+          <input id="l_price" type="number" min="0" step="1" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-right">
+        </div>
+        <div class="md:col-span-3 flex items-end">
+          <button id="btnAddLabor" class="px-6 py-2.5 bg-slate-900 hover:bg-black text-white rounded-xl font-bold w-full md:w-auto">工料追加</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- section 3: 明細テーブル -->
+  <section id="sec-table" class="print-card bg-white/80 backdrop-blur-xl rounded-[28px] shadow-xl shadow-slate-200/70 border border-white/60 overflow-hidden">
+    <div class="overflow-x-auto scrollbar-thin">
+      <table class="w-full text-[13px] min-w-[980px]">
+        <thead class="bg-slate-50/80 sticky top-0 z-10 backdrop-blur">
+          <tr class="text-slate-600 border-b border-slate-200">
+            <th class="p-3 w-8"></th>
+            <th class="p-3 text-left font-semibold">名称</th>
+            <th class="p-3 text-left font-semibold w-28">品番</th>
+            <th class="p-3 text-right font-semibold w-20">数量</th>
+            <th class="p-3 text-left font-semibold w-14">単位</th>
+            <th class="p-3 text-right font-semibold w-24">単価</th>
+            <th class="p-3 text-right font-semibold w-24">定価計</th>
+            <th class="p-3 text-right font-semibold w-28">金額</th>
+            <th class="p-3 text-right font-semibold w-24">NET合計</th>
+            <th class="p-3 text-left font-semibold">備考</th>
+            <th class="p-3 w-24 no-print"></th>
+          </tr>
+        </thead>
+        <tbody id="tbody" class="divide-y divide-slate-100"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- section 4: 合計 -->
+  <section id="sec-totals" class="print-card bg-white/80 backdrop-blur-xl rounded-[28px] shadow-xl shadow-slate-200/70 border border-white/60 p-5">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div class="rounded-2xl p-4 bg-gradient-to-b from-slate-50 to-white border border-slate-200">
+        <div class="text-[11px] text-slate-500">材料費</div>
+        <div id="sumMaterial" class="text-xl font-black tracking-tight mt-1">¥0</div>
+      </div>
+      <div class="rounded-2xl p-4 bg-gradient-to-b from-slate-50 to-white border border-slate-200">
+        <div class="text-[11px] text-slate-500">定価合計</div>
+        <div id="sumList" class="text-xl font-bold mt-1">¥0</div>
+      </div>
+      <div class="rounded-2xl p-4 bg-gradient-to-b from-rose-50 to-white border border-rose-200">
+        <div class="text-[11px] text-rose-600">値引合計</div>
+        <div id="sumDisc" class="text-xl font-bold text-rose-600 mt-1">¥0</div>
+      </div>
+      <div class="rounded-2xl p-4 bg-gradient-to-b from-slate-50 to-white border border-slate-200">
+        <div class="text-[11px] text-slate-500">小計</div>
+        <div id="sumSub" class="text-xl font-black mt-1">¥0</div>
+      </div>
+      <div class="rounded-2xl p-4 bg-gradient-to-b from-sky-50 to-white border border-sky-200">
+        <div class="text-[11px] text-sky-700">消費税</div>
+        <div id="sumTax" class="text-xl font-bold text-sky-700 mt-1">¥0</div>
+      </div>
+      <div class="rounded-2xl p-4 bg-gradient-to-br from-emerald-600 to-emerald-500 text-white shadow-lg shadow-emerald-600/20">
+        <div class="text-[11px] opacity-90">御見積金額</div>
+        <div id="sumTotal" class="text-2xl font-black tracking-tight mt-1">¥0</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+
+/* ==================== HTML安全エスケープ ==================== */
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+/* ==================== ユーティリティ ==================== */
+const $ = s => document.querySelector(s);
+const fmt = n => (n || 0).toLocaleString('ja-JP');
+const rnd = Math.round;
+
+/* ==================== 状態 ==================== */
+let state = {
+  header: { 工事名:"", 会社名:"", 担当者:"", 制作日: new Date().toISOString().slice(0,10) },
+  items: [],
+  rates: { support:15, misc:15, overhead:20, tax:10 },
+  history: []
+};
+const STORAGE_KEY = "est_v9";
+
+/* ==================== 永続化 ==================== */
+function save() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      header: state.header, items: state.items, rates: state.rates
+    }));
+  } catch(e) { console.warn('localStorage save failed', e); }
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const o = JSON.parse(raw);
+    state.header = Object.assign(state.header, o.header || {});
+    state.items  = (o.items  || []).filter(i => i && i.type !== 'tax');
+    state.rates  = Object.assign(state.rates, o.rates || {});
+  } catch(e) { console.warn('localStorage load failed', e); }
+}
+
+/* ==================== Undo ==================== */
+function push() {
+  state.history.push(JSON.stringify({
+    header: state.header,
+    items:  state.items,
+    rates:  state.rates
+  }));
+  if (state.history.length > 30) state.history.shift();
+}
+
+/* ==================== 集計 ==================== */
+/**
+ * 材料費: dividerより前の type==='item' の合計
+ * ただし dividerが複数ある場合は最初のdividerまで
+ */
+function calcMat() {
+  let s = 0;
+  for (const it of state.items) {
+    if (it.type === 'divider') break;
+    if (it.type === 'item') s += (it.total || 0);
+  }
+  return s;
+}
+
+function sums() {
+  // 値引 discount の total は負値
+  const sub  = state.items.filter(i => i.type !== 'divider').reduce((a,b) => a + (b.total||0), 0);
+  // 定価合計: 値引・divider以外の (qty×price) の合計
+  const list = state.items
+    .filter(i => !['discount','divider'].includes(i.type))
+    .reduce((a,b) => a + rnd((b.qty||0)*(b.price||0)), 0);
+  // 値引合計: discountのtotalの絶対値合計（表示用）
+  const disc = state.items
+    .filter(i => i.type === 'discount')
+    .reduce((a,b) => a + Math.abs(b.total||0), 0);
+  const tax  = rnd(sub * state.rates.tax / 100);
+  return { material: calcMat(), sub, list, disc, tax, total: sub + tax };
+}
+
+/* ==================== レンダー ==================== */
+function render() {
+  // ヘッダー反映
+  $('#h_koji').value   = state.header.工事名  || '';
+  $('#h_kaisha').value = state.header.会社名  || '';
+  $('#h_tanto').value  = state.header.担当者  || '';
+  $('#h_date').value   = state.header.制作日  || '';
+
+  // レート入力欄反映
+  $('#r_support').value = state.rates.support;
+  $('#r_misc').value    = state.rates.misc;
+  $('#r_over').value    = state.rates.overhead;
+  $('#r_tax').value     = state.rates.tax;
+
+  // -----------------------------------------------
+  // 支持材・雑材・諸経費の自動計算
+  // -----------------------------------------------
+  const mat = calcMat();
+
+  // type==='support' の計算: divider以前の累積合計を基準にする
+  let runForSupport = 0;
+  for (let i = 0; i < state.items.length; i++) {
+    const it = state.items[i];
+    if (it.type === 'divider') {
+      runForSupport = 0; // dividerでリセット
+      continue;
+    }
+    if (it.type === 'support') {
+      const base = runForSupport;
+      const amt  = rnd(base * state.rates.support / 100);
+      it.price = amt;
+      it.total = amt;
+      it.note  = `累計¥${fmt(base)}×${state.rates.support}%`;
+    } else if (it.type !== 'overhead' && it.type !== 'discount') {
+      runForSupport += (it.total || 0);
+    }
+  }
+
+  // misc: 材料費(divider前items合計)を基準
+  state.items.forEach(it => {
+    if (it.type === 'misc') {
+      const amt = rnd(mat * state.rates.misc / 100);
+      it.price = amt;
+      it.total = amt;
+      it.note  = `材料費¥${fmt(mat)}×${state.rates.misc}%`;
+    }
+  });
+
+  // overhead: discount・divider以外の全合計を基準
+  const baseOver = state.items
+    .filter(it => !['overhead','discount','divider'].includes(it.type))
+    .reduce((a,b) => a + (b.total||0), 0);
+  state.items.forEach(it => {
+    if (it.type === 'overhead') {
+      const amt = rnd(baseOver * state.rates.overhead / 100);
+      it.price = amt;
+      it.total = amt;
+      it.note  = `合計¥${fmt(baseOver)}×${state.rates.overhead}%`;
+    }
+  });
+
+  // -----------------------------------------------
+  // テーブル描画
+  // -----------------------------------------------
+  const tb = $('#tbody');
+  tb.innerHTML = '';
+
+  if (state.items.length === 0) {
+    tb.innerHTML = `<tr><td colspan="11" class="py-20">
+      <div class="flex flex-col items-center justify-center text-slate-400">
+        <div class="w-16 h-16 rounded-2xl bg-slate-100 grid place-items-center mb-3">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+        </div>
+        <p class="font-medium">材料がまだありません</p>
+        <p class="text-xs mt-1">上のフォームから追加してください</p>
+      </div></td></tr>`;
+  } else {
+    const badges = {
+      item:     '',
+      labor:    '<span class="px-1.5 py-0.5 text-[10px] rounded bg-slate-800 text-white">工</span>',
+      support:  '<span class="px-1.5 py-0.5 text-[10px] rounded bg-sky-100 text-sky-700">支持</span>',
+      misc:     '<span class="px-1.5 py-0.5 text-[10px] rounded bg-amber-100 text-amber-700">雑</span>',
+      overhead: '<span class="px-1.5 py-0.5 text-[10px] rounded bg-violet-100 text-violet-700">諸</span>',
+      discount: '<span class="px-1.5 py-0.5 text-[10px] rounded bg-rose-100 text-rose-700">値引</span>',
+    };
+
+    state.items.forEach((it, i) => {
+      const tr = document.createElement('tr');
+      const isNeg = (it.total||0) < 0;
+      const isZero= (it.total||0) === 0 && it.type !== 'divider';
+      let cls = 'group hover:bg-sky-50/50 transition ';
+      if (isNeg)  { cls += 'text-rose-600 is-discount '; }
+      else if (isZero) { cls += 'text-slate-400 '; }
+      tr.className = cls;
+
+      if (it.type === 'divider') {
+        tr.innerHTML = `
+          <td class="py-2 pl-3"></td>
+          <td colspan="9" class="py-2 pr-3"><div class="border-t-2 border-dashed border-slate-300"></div></td>
+          <td class="no-print py-2 pr-3 text-right">
+            <button onclick="del(${i})" class="text-xs text-slate-400 hover:text-red-600 transition">削除</button>
+          </td>`;
+      } else {
+        const listAmt = rnd((it.qty||0) * (it.price||0));
+        const netTot  = it.net ? rnd((it.qty||0) * it.net) : 0;
+        const badge   = badges[it.type] || '';
+        const nameEsc = (it.name||'').replace(/"/g,'&quot;');
+        const noteEsc = (it.note||'').replace(/"/g,'&quot;');
+
+        tr.innerHTML = `
+          <td class="pl-3 text-xs">${badge}</td>
+          <td class="py-1.5 pr-2">
+            <input value="${nameEsc}"
+              oninput="updName(${i},this.value)" onblur="updNameCommit(${i})"
+              class="w-full bg-transparent px-2 py-1.5 rounded-lg hover:bg-white focus:bg-white focus:outline-none focus:ring-1 focus:ring-sky-500">
+          </td>
+          <td class="text-[11px] text-slate-500 px-2">${escHtml(it.code)}</td>
+          <td class="text-right px-1">
+            <input type="number" step="1" value="${it.qty||0}"
+              oninput="updCalc(${i},'qty',this.value)"
+              class="w-20 text-right bg-transparent px-2 py-1.5 rounded-lg hover:bg-white focus:bg-white focus:outline-none focus:ring-1 focus:ring-sky-500">
+          </td>
+          <td class="px-2 text-slate-600">${it.unit||''}</td>
+          <td class="text-right px-1">
+            <input type="number" step="1" value="${it.price||0}"
+              oninput="updCalc(${i},'price',this.value)"
+              class="w-24 text-right bg-transparent px-2 py-1.5 rounded-lg hover:bg-white focus:bg-white focus:outline-none focus:ring-1 focus:ring-sky-500">
+          </td>
+          <td class="text-right pr-3 tabular-nums text-slate-500">${fmt(listAmt)}</td>
+          <td class="text-right pr-3 font-semibold tabular-nums">${fmt(it.total)}</td>
+          <td class="text-right pr-3 tabular-nums text-slate-500">${netTot ? fmt(netTot) : ''}</td>
+          <td class="text-[11px] text-slate-500 px-2 max-w-[160px] truncate" title="${noteEsc}">${it.note||''}</td>
+          <td class="no-print pr-2">
+            <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition">
+              <button onclick="moveUp(${i})"   title="上へ" class="w-7 h-7 grid place-items-center rounded-lg hover:bg-slate-200 text-sm">↑</button>
+              <button onclick="moveDown(${i})" title="下へ" class="w-7 h-7 grid place-items-center rounded-lg hover:bg-slate-200 text-sm">↓</button>
+              <button onclick="del(${i})"      title="削除" class="w-7 h-7 grid place-items-center rounded-lg hover:bg-red-100 text-red-600 font-bold">×</button>
+            </div>
+          </td>`;
+      }
+      tb.appendChild(tr);
+    });
+  }
+
+  // 合計表示
+  const s = sums();
+  $('#sumMaterial').textContent = '¥' + fmt(s.material);
+  $('#sumList').textContent     = '¥' + fmt(s.list);
+  $('#sumDisc').textContent     = '¥' + fmt(s.disc);
+  $('#sumSub').textContent      = '¥' + fmt(s.sub);
+  $('#sumTax').textContent      = '¥' + fmt(s.tax);
+  $('#sumTotal').textContent    = '¥' + fmt(s.total);
+
+  save();
+}
+
+/* ==================== 行操作 ==================== */
+// 名前だけ更新（再計算不要）
+function updName(i, v) {
+  // push()はblur時のみ（毎keystrokeはhistory爆発するため）
+  state.items[i].name = v;
+  save();
+}
+function updNameCommit(i) {
+  // フォーカスが外れたときにhistoryに積む
+  push();
+}
+
+// 数量・単価変更（金額再計算→render）
+function updCalc(i, k, v) {
+  push();
+  const it = state.items[i];
+  it[k] = Number(v);
+  // type==='item' の場合: total = qty×price (値引はnoteに記録済み、discAmtは別管理)
+  if (['item','labor'].includes(it.type)) {
+    it.total = rnd((it.qty||0) * (it.price||0));
+    // 値引discAmtがある場合は注意: まとめて値引ボタンを使うフローなので
+    // ここではtotalのみ更新し、discAmtは据え置き
+  } else {
+    // support/misc/overhead/discount: renderで再計算されるので0でよい
+    it.total = rnd((it.qty||0) * (it.price||0));
+  }
+  render();
+}
+
+function moveUp(i) {
+  if (i > 0) {
+    push();
+    [state.items[i-1], state.items[i]] = [state.items[i], state.items[i-1]];
+    render();
+  }
+}
+
+function moveDown(i) {
+  if (i < state.items.length - 1) {
+    push();
+    [state.items[i+1], state.items[i]] = [state.items[i], state.items[i+1]];
+    render();
+  }
+}
+
+function del(i) {
+  push();
+  state.items.splice(i, 1);
+  render();
+}
+
+function add(o) {
+  push();
+  state.items.push({
+    id: crypto.randomUUID ? crypto.randomUUID() : 'id_' + Date.now() + Math.random().toString(16).slice(2),
+    ...o
+  });
+  render();
+}
+
+/* ==================== プレビュー計算 ==================== */
+function updatePrev() {
+  const q = +$('#i_qty').value  || 0;
+  const p = +$('#i_price').value|| 0;
+  const n = +$('#i_net').value  || 0;
+  const d = Math.min(100, Math.max(0, +$('#i_disc').value || 0));
+  const margin   = (n && p) ? ((1 - n / p) * 100).toFixed(1) : '-';
+  const discAmt  = rnd(p * q * d / 100);
+  const afterAmt = rnd(q * p) - discAmt;
+  $('#i_margin').textContent  = margin;
+  $('#i_discAmt').textContent = fmt(discAmt);
+  $('#i_after').textContent   = fmt(afterAmt);
+}
+['i_qty','i_price','i_net','i_disc'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updatePrev);
+});
+
+/* ==================== 材料追加 ==================== */
+$('#btnAddItem').onclick = () => {
+  const name = $('#i_name').value.trim();
+  const q    = +$('#i_qty').value   || 0;
+  const p    = +$('#i_price').value || 0;
+  const n    = +$('#i_net').value   || 0;
+  const d    = Math.min(100, Math.max(0, +$('#i_disc').value || 0));
+  if (!name || q <= 0 || p <= 0) {
+    // 軽くバリデーションエラー表示
+    if (!name) $('#i_name').focus();
+    else if (q <= 0) $('#i_qty').focus();
+    else $('#i_price').focus();
+    return;
+  }
+  const discAmt = rnd(p * q * d / 100);
+  const total   = rnd(q * p);
+  const margin  = (n && p) ? ((1 - n / p) * 100).toFixed(1) : '-';
+  const after   = total - discAmt;
+  const note    = discAmt ? `余力${margin}% 値引¥${fmt(discAmt)} 値引後¥${fmt(after)}` : '';
+  add({
+    type: 'item',
+    name,
+    code:    $('#i_code').value.trim().slice(0, 20),
+    qty:     q,
+    unit:    $('#i_unit').value,
+    price:   p,
+    total,
+    net:     n || 0,
+    discAmt,
+    note
+  });
+  // フォームリセット
+  $('#i_name').value  = '';
+  $('#i_code').value  = '';
+  $('#i_price').value = '';
+  $('#i_net').value   = '';
+  $('#i_disc').value  = '';
+  $('#i_qty').value   = 1;
+  updatePrev();
+  setTimeout(() => { const el = $('#i_name'); el.focus(); el.select(); }, 0);
+};
+
+/* ==================== 工料追加 ==================== */
+$('#btnAddLabor').onclick = () => {
+  const q = +$('#l_qty').value   || 0;
+  const p = +$('#l_price').value || 0;
+  if (q <= 0 || p <= 0) return;
+  add({
+    type:  'labor',
+    name:  $('#l_name').value,
+    qty:   q,
+    unit:  $('#l_unit').value,
+    price: p,
+    total: rnd(q * p)
+  });
+  $('#l_qty').value   = 1;
+  $('#l_price').value = '';
+  setTimeout(() => { $('#l_name').focus(); }, 0);
+};
+
+/* ==================== 諸経費系 ==================== */
+$('#btnAddDivider').onclick = () => add({ type:'divider', total:0 });
+$('#btnAddSupport').onclick = () => add({ type:'support', name:'同上支持接続材費', qty:1, unit:'式', price:0, total:0 });
+$('#btnAddMisc').onclick    = () => add({ type:'misc',    name:'雑材消耗品費',    qty:1, unit:'式', price:0, total:0 });
+$('#btnAddOver').onclick    = () => add({ type:'overhead',name:'諸経費',          qty:1, unit:'式', price:0, total:0 });
+
+/* ==================== 端数調整 ==================== */
+function roundAdj(unit) {
+  const s = sums().sub;
+  const t = Math.floor(s / unit) * unit;
+  const d = t - s;
+  if (d !== 0) add({ type:'discount', name:`端数調整(${unit}円切捨て)`, qty:1, unit:'式', price:d, total:d });
+}
+
+$('#btnManualAdj').onclick = () => {
+  const v = +$('#manualAdj').value;
+  if (v !== 0) {
+    add({ type:'discount', name:'手動調整', qty:1, unit:'式', price:v, total:v });
+    $('#manualAdj').value = '';
+  }
+};
+
+/* ==================== 値引まとめ ==================== */
+$('#btnConsolidateDisc').onclick = () => {
+  push();
+  const sum = state.items
+    .filter(i => (i.discAmt || 0) > 0)
+    .reduce((a, b) => a + b.discAmt, 0);
+  // discAmtをリセットし、noteから値引情報を除去
+  state.items.forEach(it => {
+    if ((it.discAmt || 0) > 0) {
+      it.discAmt = 0;
+      // noteから値引情報を除去
+      it.note = (it.note || '').replace(/\s*余力[^%]+%\s*値引¥[\d,]+\s*値引後¥[\d,]+/,'').trim();
+    }
+  });
+  if (sum > 0) {
+    state.items.push({
+      id: crypto.randomUUID ? crypto.randomUUID() : 'id_' + Date.now(),
+      type:'discount', name:'値引', qty:1, unit:'式',
+      price: -sum, total: -sum
+    });
+  }
+  render();
+};
+
+/* ==================== Undo ==================== */
+$('#btnUndo').onclick = () => {
+  if (state.history.length === 0) return;
+  try {
+    const prev = JSON.parse(state.history.pop());
+    state.header = prev.header;
+    state.items  = prev.items;
+    state.rates  = prev.rates;
+    render();
+  } catch(e) { console.error('Undo failed', e); }
+};
+
+// Ctrl+Z でもUndo
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+    // テキスト編集中でなければUndo
+    if (!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) {
+      e.preventDefault();
+      $('#btnUndo').click();
+    }
+  }
+});
+
+/* ==================== 全消去 ==================== */
+$('#btnClear').onclick = () => {
+  if (!confirm('全て消去しますか？元に戻せません。')) return;
+  push();
+  localStorage.removeItem(STORAGE_KEY);
+  state.header = { 工事名:"", 会社名:"", 担当者:"", 制作日: new Date().toISOString().slice(0,10) };
+  state.items  = [];
+  state.rates  = { support:15, misc:15, overhead:20, tax:10 };
+  render();
+};
+
+/* ==================== JSON保存・読込 ==================== */
+$('#btnSaveJson').onclick = () => {
+  const blob = new Blob([JSON.stringify({
+    header: state.header, items: state.items, rates: state.rates
+  }, null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const koji = state.header.工事名 || 'estimate';
+  a.download = koji.replace(/[\\/:*?"<>|]/g,'_') + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+$('#fileJson').onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const o = JSON.parse(r.result);
+      push();
+      state.header = Object.assign(state.header, o.header || {});
+      state.items  = (o.items || []).filter(i => i && i.type !== 'tax');
+      state.rates  = Object.assign(state.rates, o.rates || {});
+      render();
+    } catch(err) { alert('JSONファイルが壊れているか形式が違います'); }
+    e.target.value = ''; // 同じファイルの再読み込みを可能にする
+  };
+  r.readAsText(f);
+};
+
+/* ==================== HTML保存 ==================== */
+$('#btnSaveHtml').onclick = () => {
+  const h = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+  const blob = new Blob([h], { type:'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const koji = state.header.工事名 || 'estimate';
+  a.download = koji.replace(/[\\/:*?"<>|]/g,'_') + '.html';
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+/* ==================== 印刷 ==================== */
+$('#btnPrint').onclick = () => window.print();
+
+/* ==================== タブ切替 ==================== */
+document.querySelectorAll('.tab-btn').forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll('.tab-btn').forEach(x => {
+      x.classList.remove('border-b-2','border-slate-900','text-slate-900','font-bold');
+      x.classList.add('text-slate-500');
+    });
+    b.classList.add('border-b-2','border-slate-900','text-slate-900','font-bold');
+    b.classList.remove('text-slate-500');
+    ['item','adjust','labor'].forEach(t => {
+      $('#tab-' + t).classList.toggle('hidden', t !== b.dataset.tab);
+    });
+  };
+});
+
+/* ==================== ヘッダー入力 ==================== */
+['h_koji','h_kaisha','h_tanto','h_date'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    state.header.工事名 = $('#h_koji').value;
+    state.header.会社名 = $('#h_kaisha').value;
+    state.header.担当者 = $('#h_tanto').value;
+    state.header.制作日 = $('#h_date').value;
+    save();
+  });
+});
+
+// Enterでフォーカス移動
+const headerFields = ['h_koji','h_kaisha','h_tanto','h_date'];
+headerFields.forEach((id, idx) => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    if (id === 'h_date') {
+      document.querySelector('[data-tab="item"]').click();
+      setTimeout(() => { const el = $('#i_name'); el.focus(); el.select(); }, 0);
+    } else {
+      document.getElementById(headerFields[idx+1])?.focus();
+    }
+  });
+});
+
+/* ==================== タブ内Enterナビ ==================== */
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+
+  // 材料タブ
+  if (!$('#tab-item').classList.contains('hidden')) {
+    const fields = ['i_name','i_code','i_qty','i_unit','i_price','i_net','i_disc'];
+    const idx = fields.indexOf(e.target.id);
+    if (idx > -1) {
+      e.preventDefault();
+      if (e.target.id === 'i_disc') {
+        $('#btnAddItem').click();
+      } else if (e.target.id === 'i_unit') {
+        // selectは Enterで次へ
+        document.getElementById(fields[idx+1])?.focus();
+      } else {
+        document.getElementById(fields[idx+1])?.focus();
+      }
+    }
+  }
+
+  // 工料タブ
+  if (!$('#tab-labor').classList.contains('hidden')) {
+    const fields = ['l_name','l_qty','l_unit','l_price'];
+    const idx = fields.indexOf(e.target.id);
+    if (idx > -1) {
+      e.preventDefault();
+      if (e.target.id === 'l_price') {
+        $('#btnAddLabor').click();
+      } else {
+        document.getElementById(fields[idx+1])?.focus();
+      }
+    }
+  }
+});
+
+/* ==================== レート変更 ==================== */
+['r_support','r_misc','r_over','r_tax'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    state.rates.support  = +$('#r_support').value || 0;
+    state.rates.misc     = +$('#r_misc').value    || 0;
+    state.rates.overhead = +$('#r_over').value    || 0;
+    state.rates.tax      = +$('#r_tax').value     || 0;
+    render();
+  });
+});
+
+/* ==================== 初期化 ==================== */
+load();
+render();
+updatePrev();
+</script>
+</body>
+</html>
