@@ -128,41 +128,85 @@
     table th:nth-child(10),table td:nth-child(10){ width: 80px !important; font-size:9px; }
 
     /* section4: 合計 */
-    #sec-totals { padding: 8px 10px !important; }
-    #sec-totals .grid {
-      display: flex !important;
-      gap: 6px !important;
-      flex-wrap: nowrap !important;
+    /* ===== 印刷用 合計欄 改良 ===== */
+    #sec-totals{
+      padding:12px 14px !important;
+      margin-top:10px !important;
+      border-top:2px solid #000 !important;
     }
-    #sec-totals .grid > div {
-      flex: 1;
-      border: 1px solid #999 !important;
-      border-radius: 4px !important;
-      padding: 6px 6px !important;
-      background: #fff !important;
-      text-align: center;
+
+    #sec-totals .grid{
+      display:block !important;
     }
-    #sec-totals .grid > div:last-child {
-      border: 2px solid #000 !important;
-      background: #f0f0f0 !important;
+
+    #sec-totals .grid > div{
+      display:flex !important;
+      justify-content:space-between !important;
+      align-items:center !important;
+      border:none !important;
+      border-bottom:1px solid #bbb !important;
+      border-radius:0 !important;
+      background:#fff !important;
+      padding:8px 2px !important;
+      margin:0 !important;
+      min-height:auto !important;
     }
-    #sec-totals .grid > div > div:first-child {
-      font-size: 9px !important;
-      color: #555 !important;
-      font-weight: normal !important;
+
+    /* 左ラベル */
+    #sec-totals .grid > div > div:first-child{
+      font-size:11px !important;
+      font-weight:700 !important;
+      color:#000 !important;
     }
-    #sec-totals .grid > div > div:last-child {
-      font-size: 13px !important;
-      font-weight: bold !important;
-      color: #000 !important;
-      margin-top: 3px !important;
+
+    /* 右金額 */
+    #sec-totals .grid > div > div:last-child{
+      font-size:14px !important;
+      font-weight:700 !important;
+      color:#000 !important;
+      margin-top:0 !important;
     }
-    #sumTotal { font-size: 16px !important; }
+
+    /* 最終合計 */
+    #sec-totals .grid > div:last-child{
+      border-top:2px solid #000 !important;
+      border-bottom:3px double #000 !important;
+      margin-top:10px !important;
+      padding-top:12px !important;
+      padding-bottom:12px !important;
+      background:#f3f3f3 !important;
+    }
+
+    #sumTotal{
+      font-size:24px !important;
+      font-weight:900 !important;
+      letter-spacing:1px !important;
+    }
 
     /* 値引行は赤字維持 */
     tr.is-discount td { color: #c00 !important; }
   }
   /* ========== 印刷スタイル ここまで ========== */
+
+  /* ===== F12対策 追加印刷修正 ===== */
+  @media print{
+    body{
+      overflow:visible !important;
+    }
+    table{
+      page-break-inside:auto !important;
+    }
+    tr{
+      page-break-inside:avoid !important;
+      page-break-after:auto !important;
+    }
+    input{
+      box-shadow:none !important;
+    }
+    button{
+      display:none !important;
+    }
+  }
 </style>
 <style id="tw-inline">
 /*! tailwindcss v4.2.4 | MIT License | https://tailwindcss.com */
@@ -997,6 +1041,11 @@ document.addEventListener('keydown', e => {
 load();
 render();
 updatePrev();
+
+/* ===== 印刷事故防止 ===== */
+window.addEventListener('beforeprint', () => {
+  document.activeElement?.blur();
+});
 </script>
 </body>
 </html>
